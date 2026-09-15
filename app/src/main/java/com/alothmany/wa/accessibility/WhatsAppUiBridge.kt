@@ -21,8 +21,10 @@ import com.alothmany.wa.r7.diagnostics.ReplayFixture
 import com.alothmany.wa.r7.accessibility.AndroidAccessibilityGateway
 import com.alothmany.wa.r7.accessibility.NodeSnapshotFactory
 import com.alothmany.wa.r7.accessibility.ResolutionStatus
+import com.alothmany.wa.r7.accessibility.R7NodeSnapshotCollector
 import com.alothmany.wa.r7.join.JoinActionTarget
 import com.alothmany.wa.r7.join.JoinPostconditionVerifier
+import com.alothmany.wa.r7.join.JoinVerificationResult
 import com.alothmany.wa.r7.join.JoinTargetCandidate
 import com.alothmany.wa.r7.join.JoinTargetKind
 import com.alothmany.wa.r7.join.JoinTargetResolutionStatus
@@ -90,11 +92,12 @@ class WhatsAppUiBridge(
     }.getOrNull()
 
     suspend fun waitForPackage(targetPackage: String, timeoutMs: Long = 8_000): Boolean =
-        withTimeoutOrNull(timeoutMs) {
+        withTimeoutOrNull<Boolean>(timeoutMs) {
             while (true) {
                 if (currentSnapshot()?.packageName == targetPackage) return@withTimeoutOrNull true
                 delay(120)
             }
+            false
         } ?: false
 
     suspend fun ensureChatList(maxBacks: Int = 6): Boolean {
@@ -144,7 +147,7 @@ class WhatsAppUiBridge(
             )
             return GroupsFilterNavigationEvidence(false, matchedViewId, usedProfileHint)
         }
-        val verified = withTimeoutOrNull(timeoutMs) {
+        val verified: Boolean = withTimeoutOrNull<Boolean>(timeoutMs) {
             while (true) {
                 delay(140)
                 if (groupsFilterSelected()) return@withTimeoutOrNull true
@@ -154,6 +157,7 @@ class WhatsAppUiBridge(
                 // Profiles only prioritize a candidate; structural postcondition verification remains mandatory.
                 if (changed && stillHasGroupsControl && visibleChatRowCandidates().isNotEmpty()) return@withTimeoutOrNull true
             }
+            false
         } ?: groupsFilterSelected()
 
         if (matchedViewId.isNotBlank()) {
@@ -230,7 +234,7 @@ class WhatsAppUiBridge(
         false
     }.getOrDefault(false)
 
-    suspend fun clickAnyText(tokens: List<String>, timeoutMs: Long): Boolean = withTimeoutOrNull(timeoutMs) {
+    suspend fun clickAnyText(tokens: List<String>, timeoutMs: Long): Boolean = withTimeoutOrNull<Boolean>(timeoutMs) {
         while (true) {
             val root = service.rootInActiveWindow
             if (root != null) {
@@ -243,6 +247,7 @@ class WhatsAppUiBridge(
             }
             delay(120)
         }
+        false
     } ?: false
 
     suspend fun openChatByName(name: String, maxScrolls: Int = 600): Boolean {
@@ -263,7 +268,7 @@ class WhatsAppUiBridge(
                     (node.isClickable || hasClickableAncestor(node, 4))
             }
             if (found != null && clickNodeOrAncestor(found)) {
-                return withTimeoutOrNull(5_000) {
+                return withTimeoutOrNull<Boolean>(5_000) {
                     while (true) {
                         delay(120)
                         val snapshot = currentSnapshot()
@@ -273,6 +278,7 @@ class WhatsAppUiBridge(
                             return@withTimeoutOrNull true
                         }
                     }
+                    false
                 } ?: false
             }
             val scroll = scrollListForwardVerified(2_000)
@@ -316,7 +322,7 @@ class WhatsAppUiBridge(
                 (node.isClickable || hasClickableAncestor(node, 4))
         } ?: return false
         if (!clickNodeOrAncestor(found)) return false
-        return withTimeoutOrNull(timeoutMs) {
+        return withTimeoutOrNull<Boolean>(timeoutMs) {
             while (true) {
                 delay(120)
                 val snapshot = currentSnapshot() ?: continue
@@ -326,6 +332,7 @@ class WhatsAppUiBridge(
                 val exactTitle = observedTitle?.equals(expectedTitle, true) == true
                 if (changed && exactTitle) return@withTimeoutOrNull true
             }
+            false
         } ?: false
     }
 
@@ -346,7 +353,7 @@ class WhatsAppUiBridge(
         } ?: return base
         val before = currentSnapshot()?.windowFingerprint.orEmpty()
         if (!clickNodeOrAncestor(titleNode)) return base
-        val details = withTimeoutOrNull(timeoutMs) {
+        val details: List<String> = withTimeoutOrNull<List<String>>(timeoutMs) {
             while (true) {
                 delay(140)
                 val snapshot = currentSnapshot() ?: continue
@@ -354,14 +361,16 @@ class WhatsAppUiBridge(
                     return@withTimeoutOrNull snapshot.visibleTexts
                 }
             }
+            emptyList()
         }.orEmpty()
         if (details.isNotEmpty()) {
             goBack()
-            withTimeoutOrNull(2_500) {
+            withTimeoutOrNull<Boolean>(2_500) {
                 while (true) {
                     delay(120)
                     if (currentSnapshot()?.chatTitle?.trim()?.equals(expectedTitle.trim(), true) == true) return@withTimeoutOrNull true
                 }
+                false
             }
         }
         return (base + details).distinct()
@@ -400,17 +409,18 @@ class WhatsAppUiBridge(
         )
     }.getOrDefault(InviteUiState.UNKNOWN)
 
-    suspend fun awaitInviteState(timeoutMs: Long = 8_000): InviteUiState = withTimeoutOrNull(timeoutMs) {
+    suspend fun awaitInviteState(timeoutMs: Long = 8_000): InviteUiState = withTimeoutOrNull<InviteUiState>(timeoutMs) {
         while (true) {
             if (hasMessageComposer()) return@withTimeoutOrNull InviteUiState.ALREADY_MEMBER
             val state = inviteState()
             if (state != InviteUiState.UNKNOWN) return@withTimeoutOrNull state
             delay(160)
         }
+        InviteUiState.UNKNOWN
     } ?: inviteState()
 
     suspend fun prepareInviteAction(timeoutMs: Long = 8_000): PreparedInviteAction =
-        withTimeoutOrNull(timeoutMs) {
+        withTimeoutOrNull<PreparedInviteAction>(timeoutMs) {
             while (true) {
                 val prepared = prepareInviteActionOnce()
                 if (prepared.state == InviteUiState.ALREADY_MEMBER ||
@@ -422,6 +432,7 @@ class WhatsAppUiBridge(
                 }
                 delay(160)
             }
+            prepareInviteActionOnce()
         } ?: prepareInviteActionOnce()
 
     private fun prepareInviteActionOnce(): PreparedInviteAction = runCatching {
@@ -510,7 +521,7 @@ class WhatsAppUiBridge(
         }
 
         if (target.kind == JoinTargetKind.COMMUNITY_VIEW) {
-            val secondStage = withTimeoutOrNull((timeoutMs / 2).coerceIn(1_500L, 4_000L)) {
+            val secondStage: JoinActionTarget? = withTimeoutOrNull<JoinActionTarget?>((timeoutMs / 2).coerceIn(1_500L, 4_000L)) {
                 while (true) {
                     delay(160)
                     if (hasMessageComposer()) return@withTimeoutOrNull null
@@ -519,6 +530,7 @@ class WhatsAppUiBridge(
                     val candidate = prepareInviteActionOnce()
                     if (candidate.target?.kind == JoinTargetKind.COMMUNITY_JOIN) return@withTimeoutOrNull candidate.target
                 }
+                null
             }
             if (secondStage != null) {
                 target = secondStage
@@ -541,7 +553,7 @@ class WhatsAppUiBridge(
             }
         }
 
-        val verification = withTimeoutOrNull(timeoutMs) {
+        val verification: JoinVerificationResult = withTimeoutOrNull<JoinVerificationResult>(timeoutMs) {
             while (true) {
                 delay(180)
                 val state = inviteState()
@@ -551,6 +563,7 @@ class WhatsAppUiBridge(
                     return@withTimeoutOrNull result
                 }
             }
+            joinPostconditionVerifier.verify(initial, inviteState(), hasMessageComposer(), dispatchAccepted = true)
         } ?: joinPostconditionVerifier.verify(initial, inviteState(), hasMessageComposer(), dispatchAccepted = true)
 
         val success = verification.status == com.alothmany.wa.r7.join.JoinVerificationStatus.VERIFIED
@@ -592,12 +605,13 @@ class WhatsAppUiBridge(
         val node = findMessageInputNode() ?: return false
         val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, message) }
         if (!node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)) return false
-        return withTimeoutOrNull(timeoutMs) {
+        return withTimeoutOrNull<Boolean>(timeoutMs) {
             while (true) {
                 delay(100)
                 val current = findMessageInputNode()?.text?.toString().orEmpty()
                 if (current == message) return@withTimeoutOrNull true
             }
+            false
         } ?: false
     }
 
@@ -763,7 +777,7 @@ class WhatsAppUiBridge(
             var after = before
             var telemetryAdvanced = false
             if (dispatched) {
-                val observed = withTimeoutOrNull(perAttemptTimeout) {
+                val observed: String? = withTimeoutOrNull<String>(perAttemptTimeout) {
                     while (true) {
                         delay(100)
                         val nowFingerprint = currentSnapshot()?.windowFingerprint.orEmpty()
@@ -772,6 +786,7 @@ class WhatsAppUiBridge(
                         telemetryAdvanced = nowTelemetry > telemetryBefore
                         if (viewportChanged || telemetryAdvanced) return@withTimeoutOrNull nowFingerprint.ifBlank { before }
                     }
+                    before
                 }
                 after = observed ?: currentSnapshot()?.windowFingerprint.orEmpty().ifBlank { before }
                 telemetryAdvanced = telemetryAdvanced || R7ShadowRuntime.scrollTelemetrySnapshot().first > telemetryBefore
@@ -872,12 +887,13 @@ class WhatsAppUiBridge(
         }
         if (!accepted) accepted = dispatchSwipeDown()
         val after = if (accepted) {
-            withTimeoutOrNull(timeoutMs) {
+            withTimeoutOrNull<String>(timeoutMs) {
                 while (true) {
                     delay(140)
                     val fp = currentSnapshot()?.windowFingerprint.orEmpty()
                     if (fp.isNotBlank() && fp != before) return@withTimeoutOrNull fp
                 }
+                before
             } ?: currentSnapshot()?.windowFingerprint.orEmpty()
         } else before
         return ScrollResult(accepted, before.isNotBlank() && after != before, before, after)
@@ -893,12 +909,13 @@ class WhatsAppUiBridge(
         val scrollable = root?.let { breadthFirst(it, 2500).firstOrNull { node -> node.isScrollable } }
         val accepted = scrollable?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) == true
         if (!accepted) return ScrollResult(false, false, before, before)
-        val after = withTimeoutOrNull(timeoutMs) {
+        val after: String = withTimeoutOrNull<String>(timeoutMs) {
             while (true) {
                 delay(120)
                 val fp = currentSnapshot()?.windowFingerprint.orEmpty()
                 if (fp.isNotBlank() && fp != before) return@withTimeoutOrNull fp
             }
+            before
         } ?: currentSnapshot()?.windowFingerprint.orEmpty()
         return ScrollResult(true, before.isNotBlank() && after != before, before, after)
     }
