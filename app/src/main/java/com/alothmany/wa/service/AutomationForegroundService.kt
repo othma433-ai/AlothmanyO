@@ -1,15 +1,19 @@
 package com.alothmany.wa.service
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.alothmany.wa.WaApplication
 import com.alothmany.wa.accessibility.AutomationRuntime
 import com.alothmany.wa.accessibility.WhatsAppUiBridge
@@ -291,7 +295,22 @@ class AutomationForegroundService : Service() {
     )
 
     private fun updateNotification(text: String) {
-        runCatching { NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification(text)) }
+        if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        try {
+            NotificationManagerCompat.from(this)
+                .notify(NOTIFICATION_ID, notification(text))
+        } catch (_: SecurityException) {
+            // Permission can be revoked while the service is running.
+        }
     }
 
     private fun acquireWakeLock() {

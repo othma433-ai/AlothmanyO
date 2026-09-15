@@ -59,6 +59,6 @@ object UrlNormalizer {
         }
     }
 
-    private fun decode(value: String): String = URLDecoder.decode(value, StandardCharsets.UTF_8)
-    private fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")
+    private fun decode(value: String): String = URLDecoder.decode(value, StandardCharsets.UTF_8.name())
+    private fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
 }
