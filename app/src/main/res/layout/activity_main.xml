@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+        android:padding="20dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="WA Al-Othmany v2.2" android:textStyle="bold" android:textSize="26sp" />
+        <TextView android:id="@+id/txtAccessibility" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="14dp" android:text="Accessibility: checking…" />
+        <TextView android:id="@+id/txtJob" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="Extraction Job: —" />
+        <TextView android:id="@+id/txtActionJob" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:text="Action Job: —" />
+        <TextView android:id="@+id/txtCounters" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" android:text="Links: 0 | Occurrences: 0" />
+        <TextView android:id="@+id/txtDiagnostics" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="6dp" android:text="Diagnostics: —" android:textSize="12sp" />
+
+        <Button android:id="@+id/btnAccessibility" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="16dp" android:text="فتح إعدادات Accessibility" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:text="نسخة WhatsApp" android:textStyle="bold" />
+        <Spinner android:id="@+id/spinnerPackage" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <EditText android:id="@+id/editCustomPackage" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Package مخصص مثل com.example.whatsappclone" android:inputType="textNoSuggestions" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:text="استخراج الروابط" android:textStyle="bold" />
+        <Button android:id="@+id/btnSync" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:text="مزامنة القروبات" />
+        <Button android:id="@+id/btnDeep" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="بدء Deep Extraction" />
+        <Button android:id="@+id/btnNew" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="استخراج الجديد فقط" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" android:text="فحص/انضمام روابط الدعوات" android:textStyle="bold" />
+        <EditText android:id="@+id/editInviteLinks" android:layout_width="match_parent" android:layout_height="140dp"
+            android:gravity="top|start" android:hint="ضع رابط chat.whatsapp.com في كل سطر"
+            android:inputType="textMultiLine|textNoSuggestions" android:maxLines="8" />
+        <Button android:id="@+id/btnScanInvites" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="فحص الدعوات فقط — بدون انضمام" />
+        <Button android:id="@+id/btnJoinInvites" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="فحص ثم انضمام / طلب انضمام" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" android:text="النشر إلى قروبات محددة" android:textStyle="bold" />
+        <EditText android:id="@+id/editPublishGroups" android:layout_width="match_parent" android:layout_height="120dp"
+            android:gravity="top|start" android:hint="اسم القروب في كل سطر — يتم النشر فقط لهذه الأسماء"
+            android:inputType="textMultiLine|textNoSuggestions" android:maxLines="7" />
+        <EditText android:id="@+id/editPublishMessage" android:layout_width="match_parent" android:layout_height="140dp"
+            android:gravity="top|start" android:hint="الرسالة"
+            android:inputType="textMultiLine|textCapSentences" android:maxLines="8" />
+        <Button android:id="@+id/btnPublish" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="بدء النشر للقروبات المحددة" />
+        <Button android:id="@+id/btnExportActions" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="تصدير تقرير Scan / Join / Publish (CSV)" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" android:text="التحكم والاستعادة" android:textStyle="bold" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+            <Button android:id="@+id/btnPause" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="إيقاف مؤقت" />
+            <Button android:id="@+id/btnResume" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="استكمال" />
+            <Button android:id="@+id/btnStop" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="إيقاف" />
+        </LinearLayout>
+        <Button android:id="@+id/btnRecover" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="استعادة أحدث Job غير مكتمل" />
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" android:text="التصدير" android:textStyle="bold" />
+        <Spinner android:id="@+id/spinnerExport" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/btnExport" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="تصدير الروابط" />
+
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="للتشغيل الطويل: اترك الجهاز غير مقفل أثناء أتمتة واجهة WhatsApp. النتائج والطوابير تحفظ تدريجياً في Room، وكل Join/Publish لا يسجل نجاحاً إلا بعد التحقق من تغير حالة الشاشة." />
+    </LinearLayout>
+</ScrollView>

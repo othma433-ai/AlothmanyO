@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">WA Al-Othmany</string>
+    <string name="accessibility_description">Extract links from WhatsApp groups you choose using on-screen Accessibility automation. No private WhatsApp database access.</string>
+</resources>

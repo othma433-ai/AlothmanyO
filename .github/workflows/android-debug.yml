@@ -1,0 +1,273 @@
+name: Android R7-M10 Build Certification
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r7-m10-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-and-build:
+
+    name: Verify and build R7-M10
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 45
+
+    steps:
+
+      # ======================================================
+      # SOURCE
+      # ======================================================
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # ======================================================
+      # JAVA
+      # ======================================================
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # ======================================================
+      # ANDROID SDK
+      # ======================================================
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          yes | sdkmanager --licenses >/dev/null || true
+
+          sdkmanager \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "platform-tools"
+
+      # ======================================================
+      # GRADLE
+      # ======================================================
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      # ======================================================
+      # KOTLIN CLI
+      # ======================================================
+
+      - name: Install Kotlin CLI 2.2.21
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl -fL \
+            --retry 4 \
+            --retry-delay 2 \
+            "https://github.com/JetBrains/kotlin/releases/download/v2.2.21/kotlin-compiler-2.2.21.zip" \
+            -o /tmp/kotlin.zip
+
+          sudo rm -rf /opt/kotlinc
+
+          sudo unzip -q \
+            /tmp/kotlin.zip \
+            -d /opt
+
+          echo "/opt/kotlinc/bin" >> "$GITHUB_PATH"
+
+      # ======================================================
+      # PERMISSIONS
+      # ======================================================
+
+      - name: Prepare scripts
+        shell: bash
+        run: |
+          chmod +x tools/*.sh
+
+      # ======================================================
+      # SOURCE TESTS
+      # ======================================================
+
+      - name: Legacy core tests
+        run: ./tools/run_core_tests.sh
+
+      - name: R7 M1 foundation tests
+        run: ./tools/run_r7_m1_tests.sh
+
+      - name: R7 M2 sync tests
+        run: ./tools/run_r7_m2_tests.sh
+
+      - name: R7 M3 navigation tests
+        run: ./tools/run_r7_m3_tests.sh
+
+      - name: R7 M4 persistence tests
+        run: ./tools/run_r7_m4_tests.sh
+
+      - name: R7 M4 migration test
+        run: python3 tools/test_r7_m4_migration.py
+
+      - name: R7 M5 New-only tests
+        run: ./tools/run_r7_m5_tests.sh
+
+      - name: R7 M6 recovery tests
+        run: ./tools/run_r7_m6_tests.sh
+
+      - name: R7 M7 profile/replay tests
+        run: ./tools/run_r7_m7_tests.sh
+
+      - name: R7 M8 verified join tests
+        run: ./tools/run_r7_m8_tests.sh
+
+      - name: R7 M9 accessibility host tests
+        run: ./tools/run_r7_m9_tests.sh
+
+      # ======================================================
+      # PROJECT VERIFICATION
+      # ======================================================
+
+      - name: Project static verification
+        run: python3 tools/verify_project.py
+
+      # ======================================================
+      # R7 CONTRACTS
+      # Keep these names explicit: verify_project.py requires
+      # the literal gate names.
+      # ======================================================
+
+      - name: R7 M1 compatibility contract
+        run: bash tools/r7_m1_contract.sh
+
+      - name: R7 M2 compatibility contract
+        run: bash tools/r7_m2_contract.sh
+
+      - name: R7 M3 compatibility contract
+        run: bash tools/r7_m3_contract.sh
+
+      - name: R7 M4 compatibility contract
+        run: bash tools/r7_m4_contract.sh
+
+      - name: R7 M5 compatibility contract
+        run: bash tools/r7_m5_contract.sh
+
+      - name: R7 M6 compatibility contract
+        run: bash tools/r7_m6_contract.sh
+
+      - name: R7 M7 compatibility contract
+        run: bash tools/r7_m7_contract.sh
+
+      - name: R7 M8 compatibility contract
+        run: bash tools/r7_m8_contract.sh
+
+      - name: R7 M9 compatibility contract
+        run: bash tools/r7_m9_contract.sh
+
+      - name: R7 M10 build certification contract
+        run: bash tools/r7_m10_contract.sh
+
+      # ======================================================
+      # REAL ANDROID BUILD
+      # ======================================================
+
+      - name: Android unit tests
+        run: |
+          gradle \
+            --no-daemon \
+            --stacktrace \
+            :app:testDebugUnitTest
+
+      - name: Android lint
+        run: |
+          gradle \
+            --no-daemon \
+            --stacktrace \
+            :app:lintDebug
+
+      - name: Build debug APK
+        run: |
+          gradle \
+            --no-daemon \
+            --stacktrace \
+            :app:assembleDebug
+
+      - name: Build unsigned release APK
+        run: |
+          gradle \
+            --no-daemon \
+            --stacktrace \
+            :app:assembleRelease
+
+      # ======================================================
+      # APK CERTIFICATION
+      # ======================================================
+
+      - name: Verify R7-M10 APK artifacts
+        run: ./tools/verify_r7_m10_artifacts.sh
+
+      # ======================================================
+      # CI EVIDENCE - generated even if later steps fail
+      # ======================================================
+
+      - name: Record R7-M10 CI summary
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p build/r7-m10
+
+          {
+            echo "workflow=Android R7-M10 Build Certification"
+            echo "job_status=${{ job.status }}"
+            echo "repository=${{ github.repository }}"
+            echo "ref=${{ github.ref }}"
+            echo "commit=${{ github.sha }}"
+            echo "run_id=${{ github.run_id }}"
+            echo "run_attempt=${{ github.run_attempt }}"
+          } > build/r7-m10/CI_SUMMARY.txt
+
+      # ======================================================
+      # APK ARTIFACTS
+      # ======================================================
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: WA-Al-Othmany-v2.2.0-R7-M10-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Upload unsigned release APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: WA-Al-Othmany-v2.2.0-R7-M10-release-unsigned
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+
+      - name: Upload R7-M10 build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: WA-Al-Othmany-v2.2.0-R7-M10-build-evidence
+          path: |
+            build/r7-m10/
+            app/build/reports/
+            app/build/test-results/
+          if-no-files-found: warn
+          retention-days: 14
